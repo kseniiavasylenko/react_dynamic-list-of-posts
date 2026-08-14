@@ -38,6 +38,15 @@ export const NewCommentForm: React.FC<Props> = ({ onSubmit }) => {
     });
   };
 
+  const clearBodyAfterSubmit = () => {
+    setBody('');
+
+    setErrors(prev => ({
+      ...prev,
+      body: false,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -62,7 +71,7 @@ export const NewCommentForm: React.FC<Props> = ({ onSubmit }) => {
         body,
       });
 
-      clearForm();
+      clearBodyAfterSubmit();
     } finally {
       setSubmitting(false);
     }

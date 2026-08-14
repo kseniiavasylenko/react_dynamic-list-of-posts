@@ -1,6 +1,6 @@
 import { User } from '../types/User';
-import { request } from '../utils/http';
+import { client } from '../utils/fetchClient';
 
 export const getUsers = () => {
-  return request<User[]>('/users');
+  return client.get<User[]>('/users');
 };
