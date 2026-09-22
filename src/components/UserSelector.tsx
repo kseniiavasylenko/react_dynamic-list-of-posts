@@ -1,46 +1,78 @@
-import React, { useContext } from 'react';
 import { User } from '../types/User';
-import { UserContext } from './UserContext';
-import { Loader } from './Loader';
+import { useState, useRef, useEffect } from 'react';
 
-interface Props {
-  currentUser: User | null;
-  onSelectUser: (user: User | null) => void;
+export interface Props {
+  users: User[];
+  selectedUser: User | null;
+  handleSelectUser: (user: User) => void;
 }
 
 export const UserSelector: React.FC<Props> = ({
-  currentUser,
-  onSelectUser,
+  users,
+  selectedUser,
+  handleSelectUser,
 }) => {
-  const { users, isLoading } = useContext(UserContext);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  if (isLoading) {
-    return <Loader />;
-  }
+  useEffect(() => {
+    // перевіряємо, куди клікнув юзер
+    const handleClickOutside = (event: MouseEvent) => {
+      // чи був цей клік поза компонентом
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        // якщо так —> setIsOpen(false)
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    // видаляє слухач, якщо компонент видаляється або закривається//
+    // видаляє слухач, якщо компонент видаляється або закривається//.
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   return (
-    <div className="dropdown is-active">
+    <div
+      ref={dropdownRef}
+      data-cy="UserSelector"
+      className={`dropdown ${isOpen ? 'is-active' : ''}`}
+    >
       <div className="dropdown-trigger">
-        <select
-          data-cy="UserSelector"
-          className="select"
-          value={currentUser?.id || ''}
-          onChange={e => {
-            const selectedId = Number(e.target.value);
-            const selected = users.find(u => u.id === selectedId) || null;
-
-            onSelectUser(selected);
-          }}
+        <button
+          type="button"
+          className="button"
+          aria-haspopup="true"
+          aria-controls="dropdown-menu"
+          onClick={() => setIsOpen(!isOpen)}
         >
-          <option value="" disabled>
-            Choose a user
-          </option>
+          <span>{selectedUser ? selectedUser.name : 'Choose a user'}</span>
+        </button>
+      </div>
+
+      <div className="dropdown-menu" id="dropdown-menu" role="menu">
+        <div className="dropdown-content">
           {users.map(user => (
-            <option key={user.id} value={user.id}>
+            <a
+              key={user.id}
+              href={`#user-${user.id}`}
+              className={`dropdown-item ${selectedUser?.id === user.id ? 'is-active' : ''}`}
+              onClick={event => {
+                event.preventDefault(); // Запобігаємо зайвому стрибку сторінки за якорем
+                handleSelectUser(user);
+                // закриваємо меню після вибору юзера
+                setIsOpen(false);
+              }}
+            >
               {user.name}
-            </option>
+            </a>
           ))}
-        </select>
+        </div>
       </div>
     </div>
   );

@@ -1,75 +1,54 @@
-// src/components/PostsList.tsx
 import React from 'react';
-import PropTypes from 'prop-types';
 import { Post } from '../types/Post';
 
 interface Props {
   posts: Post[];
-  currentPost: Post | null;
-  onPostSelect: (post: Post) => void;
+  selectedPost: Post | null;
+  setSelectedPost: (post: Post | null) => void;
 }
 
 export const PostsList: React.FC<Props> = ({
-  posts,
-  currentPost,
-  onPostSelect,
-}) => {
-  return (
-    <div className="block" data-cy="PostsList">
-      <p className="title is-4">Posts:</p>
-      <table className="table is-fullwidth is-striped is-hoverable is-narrow">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Title</th>
-            <th> </th>
-          </tr>
-        </thead>
-        <tbody>
-          {posts.map(post => {
-            const isSelected = currentPost?.id === post.id;
+  posts, //.
+  selectedPost,
+  setSelectedPost,
+}) => (
+  <div data-cy="PostsList">
+    <table className="table is-fullwidth is-striped is-hoverable is-narrow">
+      <thead>
+        <tr className="has-background-link-light">
+          <th>#</th>
+          <th>Title</th>
+          {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
+          <th> </th>
+        </tr>
+      </thead>
 
-            return (
-              <tr
-                key={post.id}
-                data-cy="Post"
-                className={isSelected ? 'is-selected' : ''}
+      <tbody>
+        {posts.map((post: Post) => (
+          <tr data-cy="Post" key={post.id}>
+            <td data-cy="PostId">{post.id}</td>
+
+            <td data-cy="PostTitle">{post.title}</td>
+
+            <td className="has-text-right is-vcentered">
+              <button
+                type="button"
+                data-cy="PostButton"
+                className={`button is-link ${selectedPost?.id !== post.id ? 'is-light' : ''}`}
+                onClick={() => {
+                  if (selectedPost?.id === post.id) {
+                    setSelectedPost(null);
+                  } else {
+                    setSelectedPost(post);
+                  }
+                }}
               >
-                <td data-cy="PostId">{post.id}</td>
-                <td data-cy="PostTitle">{post.title}</td>
-                <td className="has-text-right is-vcentered">
-                  <button
-                    type="button"
-                    className={`button is-link ${isSelected ? '' : 'is-light'}`}
-                    data-cy="PostButton"
-                    onClick={() => onPostSelect(post)}
-                  >
-                    {isSelected ? 'Close' : 'Open'}
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-PostsList.propTypes = {
-  posts: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.number.isRequired,
-      userId: PropTypes.number.isRequired,
-      title: PropTypes.string.isRequired,
-      body: PropTypes.string.isRequired,
-    }).isRequired,
-  ).isRequired,
-  currentPost: PropTypes.shape({
-    id: PropTypes.number.isRequired,
-    userId: PropTypes.number.isRequired,
-    title: PropTypes.string.isRequired,
-    body: PropTypes.string.isRequired,
-  }),
-  onPostSelect: PropTypes.func.isRequired,
-};
+                {selectedPost?.id === post.id ? 'Close' : 'Open'}
+              </button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);

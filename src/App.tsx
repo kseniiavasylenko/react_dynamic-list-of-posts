@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import classNames from 'classnames';
 
 import 'bulma/css/bulma.css';
@@ -9,46 +8,74 @@ import { PostsList } from './components/PostsList';
 import { PostDetails } from './components/PostDetails';
 import { UserSelector } from './components/UserSelector';
 import { Loader } from './components/Loader';
+import { useEffect, useState, SetStateAction } from 'react';
+import { client } from './utils/fetchClient';
 import { Post } from './types/Post';
 import { User } from './types/User';
-import { getPosts } from './services/post.service';
-import { UserContext } from './components/UserContext';
+import { ErrorMessage } from './types/error';
 
 export const App = () => {
-  const { users } = React.useContext(UserContext);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
 
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [currentPost, setCurrentPost] = useState<Post | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const [state, setState] = useState({
+    posts: [] as Post[],
+    selectedUser: null as User | null,
+    isLoading: false,
+    selectedPost: null as Post | null,
+  });
+
+  const { posts, selectedUser, isLoading, selectedPost } = state;
 
   useEffect(() => {
-    setCurrentPost(null);
+    client
+      .get<User[]>('/users')
+      .then(setUsers)
+      .catch(() => {
+        setErrorMessage(ErrorMessage.POSTS_LOAD_ERROR);
+      });
+  }, []);
 
-    if (!currentUser) {
-      setPosts([]);
-      setIsLoading(false);
-      setError(false);
-
+  useEffect(() => {
+    if (!selectedUser) {
       return;
     }
 
-    setIsLoading(true);
-    setError(false);
-
-    getPosts(currentUser.id)
-      .then(data => {
-        setPosts(data);
+    client
+      .get<Post[]>(`/posts?userId=${selectedUser.id}`)
+      .then(response => {
+        setState(prev => ({
+          ...prev,
+          posts: response,
+        }));
       })
       .catch(() => {
-        setError(true);
-        setPosts([]);
+        setErrorMessage(ErrorMessage.POSTS_LOAD_ERROR);
       })
       .finally(() => {
-        setIsLoading(false);
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+        }));
       });
-  }, [currentUser]);
+  }, [selectedUser]);
+
+  const handleSelectUser = (user: User) => {
+    setState({
+      posts: [],
+      selectedUser: user,
+      isLoading: true,
+      selectedPost: null,
+    });
+  };
+  //
+
+  const setSelectedPost = (post: SetStateAction<Post | null>) => {
+    setState(prev => ({
+      ...prev,
+      selectedPost: typeof post === 'function' ? post(prev.selectedPost) : post,
+    }));
+  };
 
   return (
     <main className="section">
@@ -58,41 +85,38 @@ export const App = () => {
             <div className="tile is-child box is-success">
               <div className="block">
                 <UserSelector
-                  currentUser={currentUser}
-                  onSelectUser={setCurrentUser}
+                  users={users}
+                  selectedUser={selectedUser}
+                  handleSelectUser={handleSelectUser}
                 />
               </div>
 
               <div className="block" data-cy="MainContent">
-                {!currentUser && (
+                {selectedUser === null ? (
                   <p data-cy="NoSelectedUser">No user selected</p>
-                )}
-
-                {currentUser && isLoading && <Loader />}
-
-                {currentUser && !isLoading && error && (
-                  <div
-                    className="notification is-danger"
-                    data-cy="PostsLoadingError"
-                  >
-                    Something went wrong!
-                  </div>
-                )}
-
-                {currentUser && !isLoading && !error && posts.length === 0 && (
+                ) : isLoading ? (
+                  <Loader />
+                ) : posts.length === 0 && !errorMessage ? (
                   <div className="notification is-warning" data-cy="NoPostsYet">
-                    No posts yet
+                    {ErrorMessage.NO_POSTS}
                   </div>
-                )}
-
-                {currentUser && !isLoading && !error && posts.length > 0 && (
+                ) : (
                   <PostsList
                     posts={posts}
-                    currentPost={currentPost}
-                    onPostSelect={setCurrentPost}
+                    selectedPost={selectedPost}
+                    setSelectedPost={setSelectedPost}
                   />
                 )}
               </div>
+
+              {errorMessage && (
+                <div
+                  className="notification is-danger"
+                  data-cy="PostsLoadingError"
+                >
+                  {ErrorMessage.POSTS_LOAD_ERROR}
+                </div>
+              )}
             </div>
           </div>
 
@@ -104,15 +128,16 @@ export const App = () => {
               'is-8-desktop',
               'Sidebar',
               {
-                'Sidebar--open': currentPost !== null,
+                'Sidebar--open': selectedPost !== null,
               },
             )}
           >
-            {currentPost !== null && (
-              <div className="tile is-child box is-success">
-                <PostDetails post={currentPost} />
-              </div>
-            )}
+            <div className="tile is-child box is-success ">
+              <PostDetails
+                selectedPost={selectedPost}
+                setErrorMessage={setErrorMessage}
+              />
+            </div>
           </div>
         </div>
       </div>
