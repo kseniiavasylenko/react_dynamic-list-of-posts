@@ -1,208 +1,139 @@
-import classNames from 'classnames';
 import React, { useState } from 'react';
 import { CommentData } from '../types/Comment';
 
-type Props = {
-  onSubmit: (data: CommentData) => Promise<void>;
-};
+interface Props {
+  postId: number;
+  onAddComment: (comment: CommentData) => Promise<void>;
+}
 
-export const NewCommentForm: React.FC<Props> = ({ onSubmit }) => {
-  const [name, setName] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [body, setBody] = useState<string>('');
-  const [submitting, setSubmitting] = useState<boolean>(false);
+export const NewCommentForm: React.FC<Props> = ({ postId, onAddComment }) => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [body, setBody] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const [errors, setErrors] = useState({
-    name: false,
-    email: false,
-    body: false,
-  });
+  // Ошибки валидации полей
+  const [nameError, setNameError] = useState(false);
+  const [emailError, setEmailError] = useState(false);
+  const [bodyError, setBodyError] = useState(false);
 
-  const handleErrors = () => {
-    setErrors({
-      name: !name,
-      email: !email,
-      body: !body,
-    });
-  };
-
-  const clearForm = () => {
+  // Очистка формы и сброс ошибок
+  const handleClear = () => {
     setName('');
     setEmail('');
     setBody('');
-
-    setErrors({
-      name: false,
-      email: false,
-      body: false,
-    });
+    setNameError(false);
+    setEmailError(false);
+    setBodyError(false);
   };
 
-  const clearBodyAfterSubmit = () => {
-    setBody('');
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
 
-    setErrors(prev => ({
-      ...prev,
-      body: false,
-    }));
-  };
+    // Валидация полей
+    const isNameValid = name.trim().length > 0;
+    const isEmailValid = email.trim().length > 0 && email.includes('@');
+    const isBodyValid = body.trim().length > 0;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    setNameError(!isNameValid);
+    setEmailError(!isEmailValid);
+    setBodyError(!isBodyValid);
 
-    setErrors({
-      name: false,
-      email: false,
-      body: false,
-    });
-
-    if (!name || !email || !body) {
-      handleErrors();
-
+    if (!isNameValid || !isEmailValid || !isBodyValid) {
       return;
     }
 
     setSubmitting(true);
 
     try {
-      await onSubmit({
-        name,
-        email,
-        body,
+      await onAddComment({
+        postId,
+        name: name.trim(),
+        email: email.trim(),
+        body: body.trim(),
       });
 
-      clearBodyAfterSubmit();
+      // Очищаем форму после успешного добавления
+      handleClear();
+    } catch (error) {
+      // Ошибка обработки отправки при необходимости
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name: fieldName, value } = e.target;
-
-    setErrors(prev => ({
-      ...prev,
-      [fieldName]: false,
-    }));
-
-    switch (fieldName) {
-      case 'name':
-        setName(value);
-        break;
-
-      case 'email':
-        setEmail(value);
-        break;
-
-      case 'body':
-        setBody(value);
-        break;
-    }
-  };
-
   return (
-    <form data-cy="NewCommentForm" onSubmit={handleSubmit}>
-      <div className="field" data-cy="NameField">
+    <form onSubmit={handleSubmit} data-cy="NewCommentForm">
+      <div className="field">
         <label className="label" htmlFor="comment-author-name">
           Author Name
         </label>
-
-        <div className="control has-icons-left has-icons-right">
+        <div className="control">
           <input
             type="text"
-            name="name"
             id="comment-author-name"
-            placeholder="Name Surname"
-            className={classNames('input', {
-              'is-danger': errors.name,
-            })}
+            name="name"
+            className={`input ${nameError ? 'is-danger' : ''}`}
+            placeholder="Name"
             value={name}
-            onChange={handleChange}
+            onChange={e => {
+              setName(e.target.value);
+              setNameError(false);
+            }}
           />
-
-          <span className="icon is-small is-left">
-            <i className="fas fa-user" />
-          </span>
-
-          {errors.name && (
-            <span
-              className="icon is-small is-right has-text-danger"
-              data-cy="ErrorIcon"
-            >
-              <i className="fas fa-exclamation-triangle" />
-            </span>
-          )}
         </div>
-
-        {errors.name && (
+        {nameError && (
           <p className="help is-danger" data-cy="ErrorMessage">
             Name is required
           </p>
         )}
       </div>
 
-      <div className="field" data-cy="EmailField">
+      <div className="field">
         <label className="label" htmlFor="comment-author-email">
           Author Email
         </label>
-
-        <div className="control has-icons-left has-icons-right">
+        <div className="control">
           <input
-            type="text"
-            name="email"
+            type="email"
             id="comment-author-email"
-            placeholder="email@test.com"
-            className={classNames('input', {
-              'is-danger': errors.email,
-            })}
+            name="email"
+            className={`input ${emailError ? 'is-danger' : ''}`}
+            placeholder="Email"
             value={email}
-            onChange={handleChange}
+            onChange={e => {
+              setEmail(e.target.value);
+              setEmailError(false);
+            }}
           />
-
-          <span className="icon is-small is-left">
-            <i className="fas fa-envelope" />
-          </span>
-
-          {errors.email && (
-            <span
-              className="icon is-small is-right has-text-danger"
-              data-cy="ErrorIcon"
-            >
-              <i className="fas fa-exclamation-triangle" />
-            </span>
-          )}
         </div>
-
-        {errors.email && (
+        {emailError && (
           <p className="help is-danger" data-cy="ErrorMessage">
-            Email is required
+            Email is required and must be valid
           </p>
         )}
       </div>
 
-      <div className="field" data-cy="BodyField">
+      <div className="field">
         <label className="label" htmlFor="comment-body">
           Comment Text
         </label>
-
         <div className="control">
           <textarea
             id="comment-body"
             name="body"
-            placeholder="Type comment here"
-            className={classNames('textarea', {
-              'is-danger': errors.body,
-            })}
+            className={`textarea ${bodyError ? 'is-danger' : ''}`}
+            placeholder="Type your comment here..."
             value={body}
-            onChange={handleChange}
+            onChange={e => {
+              setBody(e.target.value);
+              setBodyError(false);
+            }}
           />
         </div>
-
-        {errors.body && (
+        {bodyError && (
           <p className="help is-danger" data-cy="ErrorMessage">
-            Enter some text
+            Comment body is required
           </p>
         )}
       </div>
@@ -211,19 +142,20 @@ export const NewCommentForm: React.FC<Props> = ({ onSubmit }) => {
         <div className="control">
           <button
             type="submit"
-            className={classNames('button is-link', {
-              'is-loading': submitting,
-            })}
+            className={`button is-link ${submitting ? 'is-loading' : ''}`}
+            disabled={submitting}
           >
             Add
           </button>
         </div>
-
         <div className="control">
+          {/* ОБРАТИТЕ ВНИМАНИЕ: type="button" предотвращает отправку формы при очистке */}
           <button
-            type="reset"
+            type="button"
             className="button is-link is-light"
-            onClick={clearForm}
+            onClick={handleClear}
+            disabled={submitting}
+            data-cy="ClearButton"
           >
             Clear
           </button>

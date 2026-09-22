@@ -2,18 +2,34 @@ import React, { useEffect, useState } from 'react';
 import { User } from '../types/User';
 import { getUsers } from '../services/users.service';
 
-export const UserContext = React.createContext<User[]>([]);
+export const UserContext = React.createContext<{
+  users: User[];
+  isLoading: boolean;
+  error: boolean;
+}>({
+  users: [],
+  isLoading: false,
+  error: false,
+});
 
-type Props = {
-  children: React.ReactNode;
-};
-
-export const UsersProvider: React.FC<Props> = ({ children }) => {
+export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    getUsers().then(setUsers);
+    setIsLoading(true);
+    getUsers()
+      .then(setUsers)
+      .catch(() => setError(true))
+      .finally(() => setIsLoading(false));
   }, []);
 
-  return <UserContext.Provider value={users}>{children}</UserContext.Provider>;
+  return (
+    <UserContext.Provider value={{ users, isLoading, error }}>
+      {children}
+    </UserContext.Provider>
+  );
 };

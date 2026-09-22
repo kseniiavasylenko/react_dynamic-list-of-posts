@@ -1,92 +1,39 @@
-import React, { useContext, useEffect, useState } from 'react';
-import classNames from 'classnames';
-import { UserContext } from './UserContext';
+import React, { useContext } from 'react';
 import { User } from '../types/User';
+import { UserContext } from './UserContext';
 
-type Props = {
+interface Props {
   currentUser: User | null;
-  onSelectUser: (user: User) => void;
-};
+  onSelectUser: (user: User | null) => void;
+}
 
 export const UserSelector: React.FC<Props> = ({
   currentUser,
   onSelectUser,
 }) => {
-  const [selectIsOpen, setSelectIsOpen] = useState<boolean>(false);
-  const users = useContext(UserContext);
-
-  useEffect(() => {
-    if (!selectIsOpen) {
-      return;
-    }
-
-    const handleOutClick = () => {
-      setSelectIsOpen(false);
-    };
-
-    document.addEventListener('click', handleOutClick);
-
-    return () => {
-      document.removeEventListener('click', handleOutClick);
-    };
-  }, [selectIsOpen]);
+  const { users } = useContext(UserContext);
 
   return (
-    <div
-      data-cy="UserSelector"
-      className={classNames('dropdown', {
-        'is-active': selectIsOpen,
-      })}
-    >
-      <div className="dropdown-trigger">
-        <button
-          type="button"
-          className="button"
-          aria-haspopup="true"
-          aria-controls="dropdown-menu"
-          onClick={event => {
-            event.stopPropagation();
-            setSelectIsOpen(state => !state);
-          }}
-        >
-          {currentUser ? (
-            <span>{currentUser.name}</span>
-          ) : (
-            <span>Choose a user</span>
-          )}
+    <div className="select is-fullwidth">
+      <select
+        value={currentUser?.id || ''}
+        onChange={e => {
+          const selectedId = Number(e.target.value);
+          const selectedUser = users.find(u => u.id === selectedId) || null;
 
-          <span className="icon is-small">
-            <i
-              className={classNames(
-                'fas',
-                !selectIsOpen ? 'fa-angle-down' : 'fa-angle-up',
-              )}
-              aria-hidden="true"
-            />
-          </span>
-        </button>
-      </div>
-
-      <div className="dropdown-menu" id="dropdown-menu" role="menu">
-        <div className="dropdown-content">
-          {users.map(user => (
-            <a
-              key={user.id}
-              href={`#user-${user.id}`}
-              className={classNames('dropdown-item', {
-                'is-active': currentUser?.id === user.id,
-              })}
-              onClick={event => {
-                event.preventDefault();
-                onSelectUser(user);
-                setSelectIsOpen(false);
-              }}
-            >
-              {user.name}
-            </a>
-          ))}
-        </div>
-      </div>
+          onSelectUser(selectedUser);
+        }}
+        data-cy="UserSelector"
+      >
+        <option value="" disabled>
+          Choose a user
+        </option>
+        {users.map(user => (
+          <option key={user.id} value={user.id}>
+            {user.name}
+          </option>
+        ))}
+      </select>
     </div>
   );
 };
