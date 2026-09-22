@@ -1,4 +1,6 @@
+// src/components/NewCommentForm.tsx
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { CommentData } from '../types/Comment';
 
 interface Props {
@@ -10,14 +12,12 @@ export const NewCommentForm: React.FC<Props> = ({ postId, onAddComment }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [body, setBody] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
-  // Ошибки валидации полей
   const [nameError, setNameError] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [bodyError, setBodyError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Очистка формы и сброс ошибок
   const handleClear = () => {
     setName('');
     setEmail('');
@@ -27,13 +27,12 @@ export const NewCommentForm: React.FC<Props> = ({ postId, onAddComment }) => {
     setBodyError(false);
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    // Валидация полей
-    const isNameValid = name.trim().length > 0;
-    const isEmailValid = email.trim().length > 0 && email.includes('@');
-    const isBodyValid = body.trim().length > 0;
+    const isNameValid = name.trim() !== '';
+    const isEmailValid = email.trim() !== '';
+    const isBodyValid = body.trim() !== '';
 
     setNameError(!isNameValid);
     setEmailError(!isEmailValid);
@@ -53,10 +52,13 @@ export const NewCommentForm: React.FC<Props> = ({ postId, onAddComment }) => {
         body: body.trim(),
       });
 
-      // Очищаем форму после успешного добавления
-      handleClear();
+      // ✅ Зберігаємо name та email, очищаємо ТІЛЬКИ body та скидаємо помилки
+      setBody('');
+      setBodyError(false);
+      setNameError(false);
+      setEmailError(false);
     } catch (error) {
-      // Ошибка обработки отправки при необходимости
+      // ❌ При помилці не очищаємо поля, щоб користувач міг повторити спробу
     } finally {
       setSubmitting(false);
     }
@@ -70,8 +72,8 @@ export const NewCommentForm: React.FC<Props> = ({ postId, onAddComment }) => {
         </label>
         <div className="control">
           <input
-            type="text"
             id="comment-author-name"
+            type="text"
             name="name"
             className={`input ${nameError ? 'is-danger' : ''}`}
             placeholder="Name"
@@ -80,6 +82,7 @@ export const NewCommentForm: React.FC<Props> = ({ postId, onAddComment }) => {
               setName(e.target.value);
               setNameError(false);
             }}
+            data-cy="CommentNameInput"
           />
         </div>
         {nameError && (
@@ -95,8 +98,8 @@ export const NewCommentForm: React.FC<Props> = ({ postId, onAddComment }) => {
         </label>
         <div className="control">
           <input
-            type="email"
             id="comment-author-email"
+            type="email"
             name="email"
             className={`input ${emailError ? 'is-danger' : ''}`}
             placeholder="Email"
@@ -105,30 +108,32 @@ export const NewCommentForm: React.FC<Props> = ({ postId, onAddComment }) => {
               setEmail(e.target.value);
               setEmailError(false);
             }}
+            data-cy="CommentEmailInput"
           />
         </div>
         {emailError && (
           <p className="help is-danger" data-cy="ErrorMessage">
-            Email is required and must be valid
+            Email is required
           </p>
         )}
       </div>
 
       <div className="field">
         <label className="label" htmlFor="comment-body">
-          Comment Text
+          Write a comment
         </label>
         <div className="control">
           <textarea
             id="comment-body"
             name="body"
             className={`textarea ${bodyError ? 'is-danger' : ''}`}
-            placeholder="Type your comment here..."
+            placeholder="Comment"
             value={body}
             onChange={e => {
               setBody(e.target.value);
               setBodyError(false);
             }}
+            data-cy="CommentBodyInput"
           />
         </div>
         {bodyError && (
@@ -144,18 +149,17 @@ export const NewCommentForm: React.FC<Props> = ({ postId, onAddComment }) => {
             type="submit"
             className={`button is-link ${submitting ? 'is-loading' : ''}`}
             disabled={submitting}
+            data-cy="SubmitCommentButton"
           >
             Add
           </button>
         </div>
         <div className="control">
-          {/* ОБРАТИТЕ ВНИМАНИЕ: type="button" предотвращает отправку формы при очистке */}
           <button
             type="button"
             className="button is-link is-light"
             onClick={handleClear}
             disabled={submitting}
-            data-cy="ClearButton"
           >
             Clear
           </button>
@@ -163,4 +167,9 @@ export const NewCommentForm: React.FC<Props> = ({ postId, onAddComment }) => {
       </div>
     </form>
   );
+};
+
+NewCommentForm.propTypes = {
+  postId: PropTypes.number.isRequired,
+  onAddComment: PropTypes.func.isRequired,
 };

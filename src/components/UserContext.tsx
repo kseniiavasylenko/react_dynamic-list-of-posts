@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from 'react';
+// src/components/UserContext.tsx
+import React, { createContext, useEffect, useState } from 'react';
 import { User } from '../types/User';
-import { getUsers } from '../services/users.service';
+import { getUsers } from '../services/users.service'; // перевірте шлях до вашого API
 
-export const UserContext = React.createContext<{
+interface UserContextType {
   users: User[];
   isLoading: boolean;
-  error: boolean;
-}>({
+  hasError: boolean;
+}
+
+export const UserContext = createContext<UserContextType>({
   users: [],
   isLoading: false,
-  error: false,
+  hasError: false,
 });
 
 export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -17,18 +20,38 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     setIsLoading(true);
+    setHasError(false);
+
     getUsers()
-      .then(setUsers)
-      .catch(() => setError(true))
-      .finally(() => setIsLoading(false));
+      .then(data => {
+        if (isMounted) {
+          setUsers(data);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setHasError(true);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
-    <UserContext.Provider value={{ users, isLoading, error }}>
+    <UserContext.Provider value={{ users, isLoading, hasError }}>
       {children}
     </UserContext.Provider>
   );

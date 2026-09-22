@@ -1,4 +1,6 @@
+// src/components/PostDetails.tsx
 import React, { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Post } from '../types/Post';
 import { PostComment, CommentData } from '../types/Comment';
 import {
@@ -20,13 +22,17 @@ export const PostDetails: React.FC<Props> = ({ post }) => {
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    if (!post?.id) {
+    setComments([]);
+    setShowForm(false);
+    setError(false);
+
+    // Перевірка: якщо пост не обраний або id відсутній — запит НЕ робимо
+    if (!post || !post.id) {
+      setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-    setError(false);
-    setShowForm(false);
 
     getPostComments(post.id)
       .then(setComments)
@@ -35,30 +41,40 @@ export const PostDetails: React.FC<Props> = ({ post }) => {
   }, [post.id]);
 
   const handleAddComment = async (commentData: CommentData) => {
-    const newComment = await addComment(commentData);
+    setError(false);
 
-    setComments(prev => [...prev, newComment]);
+    try {
+      const newComment = await addComment({
+        ...commentData,
+        postId: post.id,
+      });
+
+      setComments(prev => [...prev, newComment]);
+    } catch (err) {
+      setError(true);
+      throw err;
+    }
   };
 
   const handleDeleteComment = async (commentId: number) => {
+    setError(false);
     const previousComments = [...comments];
 
-    // Optimistic UI: удаляем сразу
     setComments(prev => prev.filter(c => c.id !== commentId));
 
     try {
       await deleteComment(commentId);
     } catch {
-      // При ошибке откатываем изменения обратно
       setComments(previousComments);
+      setError(true);
     }
   };
 
   return (
-    <div className="content">
+    <div className="content" data-cy="PostDetails">
       <div className="block">
-        <h2>{post.title}</h2>
-        <p>{post.body}</p>
+        <h2 data-cy="PostTitle">{post.title}</h2>
+        <p data-cy="PostBody">{post.body}</p>
       </div>
 
       <div className="block">
@@ -77,7 +93,6 @@ export const PostDetails: React.FC<Props> = ({ post }) => {
         )}
 
         {!isLoading &&
-          !error &&
           comments.length > 0 &&
           comments.map(comment => (
             <article
@@ -86,7 +101,9 @@ export const PostDetails: React.FC<Props> = ({ post }) => {
               data-cy="Comment"
             >
               <div className="message-header">
-                <p>{comment.name}</p>
+                <a href={`mailto:${comment.email}`} data-cy="CommentAuthor">
+                  {comment.name}
+                </a>
                 <button
                   type="button"
                   className="delete is-small"
@@ -95,11 +112,13 @@ export const PostDetails: React.FC<Props> = ({ post }) => {
                   data-cy="CommentDelete"
                 />
               </div>
-              <div className="message-body">{comment.body}</div>
+              <div className="message-body" data-cy="CommentBody">
+                {comment.body}
+              </div>
             </article>
           ))}
 
-        {!isLoading && !error && !showForm && (
+        {!isLoading && !showForm && (
           <button
             type="button"
             className="button is-link"
@@ -110,7 +129,7 @@ export const PostDetails: React.FC<Props> = ({ post }) => {
           </button>
         )}
 
-        {!isLoading && !error && showForm && (
+        {!isLoading && showForm && (
           <NewCommentForm
             key={post.id}
             postId={post.id}
@@ -120,4 +139,13 @@ export const PostDetails: React.FC<Props> = ({ post }) => {
       </div>
     </div>
   );
+};
+
+PostDetails.propTypes = {
+  post: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    userId: PropTypes.number.isRequired,
+    title: PropTypes.string.isRequired,
+    body: PropTypes.string.isRequired,
+  }).isRequired,
 };

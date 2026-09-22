@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from 'react';
 import classNames from 'classnames';
 
 import 'bulma/css/bulma.css';
@@ -8,25 +9,27 @@ import { PostsList } from './components/PostsList';
 import { PostDetails } from './components/PostDetails';
 import { UserSelector } from './components/UserSelector';
 import { Loader } from './components/Loader';
-import { useEffect, useState } from 'react';
 import { Post } from './types/Post';
 import { User } from './types/User';
 import { getPosts } from './services/post.service';
+import { UserContext } from './components/UserContext';
 
 export const App = () => {
+  const { users } = React.useContext(UserContext);
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [currentPost, setCurrentPost] = useState<Post | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     setCurrentPost(null);
 
-    if (!currentUser?.id) {
+    if (!currentUser) {
       setPosts([]);
-      setError(false);
       setIsLoading(false);
+      setError(false);
 
       return;
     }
@@ -35,9 +38,16 @@ export const App = () => {
     setError(false);
 
     getPosts(currentUser.id)
-      .then(data => setPosts(data))
-      .catch(() => setError(true))
-      .finally(() => setIsLoading(false));
+      .then(data => {
+        setPosts(data);
+      })
+      .catch(() => {
+        setError(true);
+        setPosts([]);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [currentUser]);
 
   return (
@@ -93,12 +103,16 @@ export const App = () => {
               'is-parent',
               'is-8-desktop',
               'Sidebar',
-              { 'Sidebar--open': currentPost },
+              {
+                'Sidebar--open': currentPost !== null,
+              },
             )}
           >
-            <div className="tile is-child box is-success">
-              {currentPost && <PostDetails post={currentPost} />}
-            </div>
+            {currentPost !== null && (
+              <div className="tile is-child box is-success">
+                <PostDetails post={currentPost} />
+              </div>
+            )}
           </div>
         </div>
       </div>
